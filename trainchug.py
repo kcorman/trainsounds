@@ -6,18 +6,33 @@ import sched
 
 pygame.init()
 chugs = []
-chugs.append(pygame.mixer.Sound("sounds/goodchug1.wav"))
-chugs.append(pygame.mixer.Sound("sounds/goodchug2.wav"))
+chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug1.wav"))
+chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug2.wav"))
+chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug3.wav"))
+chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug4.wav"))
 
-CHUG_SENSOR=26
+idle_sounds = []
+idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle1.wav"))
+idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle2.wav"))
+idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle3.wav"))
+idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle4.wav"))
+idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle5.wav"))
+
+CHUG_SENSOR=4
 chugcounter=0
+SECONDS_BEFORE_IDLE_SOUND=5
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(CHUG_SENSOR, GPIO.IN)
+GPIO.setup(CHUG_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 scheduler = sched.scheduler(time.time, time.sleep)
 last_sound_played_at = None
 reset_chug_sound = True
 last_real_chug_count = 0
+idle_sound_index = 0
+
+# The currently playing idle sound
+idle_sound = None
+idle_sound_ends_at = None
 
 def main():
     GPIO.setmode(GPIO.BCM)
@@ -35,6 +50,33 @@ def main():
 
         time.sleep(.005)
 
+def playIdleSound():
+    global last_sound_played_at
+    global idle_sound
+    global idle_sound_index
+    global idle_sound_ends_at
+    global scheduler
+    print("Checking if should play idle sound")
+    now = time.time()
+    last = 0.0
+    if(last_sound_played_at != None):
+        last = last_sound_played_at
+    diff = now - last
+    if(diff > SECONDS_BEFORE_IDLE_SOUND):
+        # It has been more than 5 seconds since last chug, start idle sounds
+        if(idle_sound == None or idle_sound_ends_at < now):
+            idle_sound = idle_sounds[idle_sound_index]
+            idle_sound.play()
+            idle_sound_ends_at = now + idle_sound.get_length()
+            idle_sound_index = (idle_sound_index + 1) % len(idle_sounds)
+            scheduler.enter(idle_sound.get_length(),2, playIdleSound)
+        else:
+            scheduler.enter(1.0,2,playIdleSound)
+    else:
+        scheduler.enter(1.0,2,playIdleSound)
+    print("End check for idle sound")
+
+
 def justPlay():
     while(True):
         playChug()
@@ -51,7 +93,7 @@ def playChug(isSource, expected_last_real_chug_count):
     if(expected_last_real_chug_count != last_real_chug_count):
         return
     print("PlayChug source=" + str(isSource))
-    chugcounter = (chugcounter + 1) % 2
+    chugcounter = (chugcounter + 1) % len(chugs)
     val = chugcounter
     playSound(val)
     if(isSource):
@@ -73,6 +115,7 @@ def playChugEvent(ignored):
     if GPIO.input(CHUG_SENSOR): 
         print("Detected rising edge")
         if(reset_chug_sound == True or reset_chug_sound == False):
+            print("Scheduling chugs")
             last_real_chug_count +=1
             scheduler.enter(0, 1, playChug, (True,last_real_chug_count))
             scheduleSecondaryChugs()
@@ -88,10 +131,13 @@ def callback(channel):
 
 GPIO.add_event_detect(CHUG_SENSOR, GPIO.BOTH, callback=playChugEvent, bouncetime=20)
 
+playIdleSound()
+
 try:
     while(True):
-        scheduler.run()
-        time.sleep(.05)
+        #print("Scheduler run")
+        scheduler.run(blocking=False)
+        time.sleep(.1)
 
 except KeyboardInterrupt:
     print("Cleaning up")

@@ -6,17 +6,17 @@ import sched
 
 pygame.init()
 chugs = []
-chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug1.wav"))
-chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug2.wav"))
-chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug3.wav"))
-chugs.append(pygame.mixer.Sound("sounds/ChugSounds/goodchug4.wav"))
+chugs.append(pygame.mixer.Sound("/home/pi/stuff/sounds/ChugSounds/goodchug1.wav"))
+chugs.append(pygame.mixer.Sound("/home/pi/stuff/sounds/ChugSounds/goodchug2.wav"))
+chugs.append(pygame.mixer.Sound("/home/pi/stuff/sounds/ChugSounds/goodchug3.wav"))
+chugs.append(pygame.mixer.Sound("/home/pi/stuff/sounds/ChugSounds/goodchug4.wav"))
 
 idle_sounds = []
-idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle1.wav"))
-idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle2.wav"))
-idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle3.wav"))
-idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle4.wav"))
-idle_sounds.append(pygame.mixer.Sound("sounds/IdleSounds/LocomotiveIdle5.wav"))
+idle_sounds.append(pygame.mixer.Sound("/home/pi/stuff/sounds/IdleSounds/LocomotiveIdle1.wav"))
+idle_sounds.append(pygame.mixer.Sound("/home/pi/stuff/sounds/IdleSounds/LocomotiveIdle2.wav"))
+idle_sounds.append(pygame.mixer.Sound("/home/pi/stuff/sounds/IdleSounds/LocomotiveIdle3.wav"))
+idle_sounds.append(pygame.mixer.Sound("/home/pi/stuff/sounds/IdleSounds/LocomotiveIdle4.wav"))
+idle_sounds.append(pygame.mixer.Sound("/home/pi/stuff/sounds/IdleSounds/LocomotiveIdle5.wav"))
 
 CHUG_SENSOR=4
 chugcounter=0
@@ -93,6 +93,8 @@ def playChug(isSource, expected_last_real_chug_count):
     if(expected_last_real_chug_count != last_real_chug_count):
         return
     print("PlayChug source=" + str(isSource))
+    if(idle_sound != None and idle_sound_ends_at > time.time()):
+        idle_sound.fadeout(2000)
     chugcounter = (chugcounter + 1) % len(chugs)
     val = chugcounter
     playSound(val)

@@ -26,7 +26,6 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(CHUG_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 scheduler = sched.scheduler(time.time, time.sleep)
 last_sound_played_at = None
-reset_chug_sound = True
 last_real_chug_count = 0
 idle_sound_index = 0
 
@@ -111,27 +110,22 @@ def scheduleSecondaryChugs():
         scheduler.enter(timeDiff / 3,1, playChug, (False,last_real_chug_count))
         scheduler.enter(2 * timeDiff / 3,1, playChug, (False,last_real_chug_count))
 
-def playChugEvent(ignored):
-    global reset_chug_sound
-    global last_real_chug_count
-    if GPIO.input(CHUG_SENSOR): 
-        print("Detected rising edge")
-        if(reset_chug_sound == True or reset_chug_sound == False):
-            print("Scheduling chugs")
-            last_real_chug_count +=1
-            scheduler.enter(0, 1, playChug, (True,last_real_chug_count))
-            scheduleSecondaryChugs()
-            reset_chug_sound = False
-    else:
-        reset_chug_sound = True
+def onWheelRotationEvent(pin):
+    print("Detected rising edge")
+    scheduler.enter(0, 1, playChugEvent)
 
-def callback(channel):
-    print("Detected rise")
+def playChugEvent():
+    global last_real_chug_count
+    last_real_chug_count += 1
+    print("Scheduling chugs")
+    scheduler.enter(0, 1, playChug, (True,last_real_chug_count))
+    scheduleSecondaryChugs()
+    reset_chug_sound = False
 
 #main()
 #justPlay()
 
-GPIO.add_event_detect(CHUG_SENSOR, GPIO.BOTH, callback=playChugEvent, bouncetime=20)
+GPIO.add_event_detect(CHUG_SENSOR, GPIO.RISING, callback=onWheelRotationEvent, bouncetime=100)
 
 playIdleSound()
 
